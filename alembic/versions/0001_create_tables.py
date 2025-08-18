@@ -22,6 +22,7 @@ def upgrade() -> None:
         "users",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("username", sa.String(length=50), nullable=False, unique=True),
+        sa.Column("password", sa.String(length=255), nullable=False),
     )
     op.create_table(
         "messages",
