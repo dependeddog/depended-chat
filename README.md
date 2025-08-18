@@ -29,3 +29,13 @@ Apply database migrations:
 ```bash
 alembic upgrade head
 ```
+
+## Docker
+
+Run the application, PostgreSQL database, RabbitMQ broker, and Nginx reverse proxy with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+The API will be available at [http://localhost](http://localhost) and the RabbitMQ management UI at [http://localhost:15672](http://localhost:15672).
