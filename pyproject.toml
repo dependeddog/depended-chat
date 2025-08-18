@@ -1,0 +1,23 @@
+[project]
+name = "depended-chat"
+version = "0.1.0"
+description = "Modern chat backend"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{name = "Example", email = "example@example.com"}]
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "pydantic-settings",
+    "alembic",
+    "aio-pika",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
