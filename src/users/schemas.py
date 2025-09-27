@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -7,7 +9,7 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-	id: int
+	id: UUID
 	username: str
 
 	class Config:

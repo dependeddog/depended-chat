@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional
+import uuid
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import INET, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import INET, UUID
 
 from src.models import Base
 
@@ -13,7 +14,7 @@ from src.models import Base
 class RefreshToken(Base):
 	__tablename__ = "auth_refresh_tokens"
 
-	id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+	id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 	user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
 
 	# Уникальный идентификатор из payload (jti) + защита от подбора — храним только хэш токена

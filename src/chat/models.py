@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
-from enum import Enum
 from typing import TYPE_CHECKING
+from enum import Enum
+import uuid
 
 from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import UUID
 
 from src.models import Base
 
@@ -21,7 +22,7 @@ class MessageType(str, Enum):
 class Message(Base):
     __tablename__ = "messages"
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
     chat_id: Mapped[UUID] = mapped_column(ForeignKey("chats.id"))
     type: Mapped[MessageType] = mapped_column(SAEnum(MessageType), default=MessageType.TEXT)
@@ -40,7 +41,7 @@ class Message(Base):
 class Chat(Base):
     __tablename__ = "chats"
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user1_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     user2_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

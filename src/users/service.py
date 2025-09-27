@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,7 @@ async def get_user_by_username(db: AsyncSession, username: str) -> Optional[mode
 	return result.scalar_one_or_none()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[models.User]:
+async def get_user_by_id(db: AsyncSession, user_id: UUID) -> Optional[models.User]:
 	result = await db.execute(select(models.User).where(models.User.id == user_id))
 	return result.scalar_one_or_none()
 

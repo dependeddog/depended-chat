@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -16,7 +18,7 @@ class TokenPayload(BaseModel):
     iss: str
     aud: str
     type: str  # "access" или "refresh"
-    id: int
+    id: UUID
     username: str
 
 

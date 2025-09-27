@@ -33,7 +33,7 @@ def _base_claims(subject: str, ttl_seconds: int, *, token_type: str, extra: dict
 def create_access_token(user: dict) -> tuple[str, int]:
     """user = {'id': int, 'username': str}"""
     ttl = settings.access_token_expire_minutes * 60
-    payload = _base_claims(str(user["id"]), ttl, token_type="access", extra=user)
+    payload = _base_claims(user["id"], ttl, token_type="access", extra=user)
 
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return token, ttl
@@ -41,7 +41,7 @@ def create_access_token(user: dict) -> tuple[str, int]:
 
 def create_refresh_token(user: dict) -> tuple[str, int]:
     ttl = settings.refresh_token_expire_days * 24 * 60 * 60
-    payload = _base_claims(str(user["id"]), ttl, token_type="refresh", extra=user)
+    payload = _base_claims(user["id"], ttl, token_type="refresh", extra=user)
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return token, ttl
 

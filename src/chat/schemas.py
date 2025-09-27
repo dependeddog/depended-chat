@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -11,15 +12,16 @@ class MessageType(str, Enum):
 
 
 class MessageCreate(BaseModel):
-    user_id: int
+    user_id: UUID
+    chat_id: UUID
     type: MessageType = MessageType.TEXT
     content: str | None = None
     media_url: str | None = None
 
 
 class MessageRead(BaseModel):
-    id: int
-    user_id: int
+    id: UUID
+    user_id: UUID
     type: MessageType
     content: str | None = None
     media_url: str | None = None

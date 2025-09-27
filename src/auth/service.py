@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,11 +34,11 @@ async def persist_refresh(
         raise exceptions.NotRefreshToken()
 
     jti: str = payload["jti"]
-    user_id: int = int(payload["id"])
+    user_id: UUID = payload["id"]
     exp_ts: int = payload["exp"]
 
     rt = models.RefreshToken(
-        id=str(uuid4()),
+        id=uuid4(),
         user_id=user_id,
         jti=jti,
         token_sha256=security.sha256_hex(token),
@@ -107,8 +107,8 @@ async def rotate_refresh(db: AsyncSession, token: str) -> str:
     # Сохраняем новый refresh
     new_payload = utils.decode_token(new_refresh)
     new_rt = models.RefreshToken(
-        id=str(uuid4()),
-        user_id=int(new_payload["id"]),
+        id=uuid4(),
+        user_id=new_payload["id"],
         jti=new_payload["jti"],
         token_sha256=security.sha256_hex(new_refresh),
         created_at=security.now_utc(),

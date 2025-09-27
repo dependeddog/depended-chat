@@ -26,8 +26,8 @@ async def login(user_in: users_schemas.UserLogin, request: Request, db: AsyncSes
     Логин: выдаём access и refresh, refresh сохраняем в БД.
     """
     user = await service.authenticate_user(db, user_in.username, user_in.password)
-    access, access_ttl = utils.create_access_token({"id": user.id, "username": user.username})
-    refresh, _ = utils.create_refresh_token({"id": user.id, "username": user.username})
+    access, access_ttl = utils.create_access_token({"id": str(user.id), "username": user.username})
+    refresh, _ = utils.create_refresh_token({"id": str(user.id), "username": user.username})
 
     # Сохраняем refresh в БД с контекстом
     ua = request.headers.get("user-agent")
@@ -61,7 +61,7 @@ async def refresh_token(
     new_refresh = await service.rotate_refresh(db, creds.credentials)
 
     # Создаём новый access
-    access, access_ttl = utils.create_access_token({"id": payload["id"], "username": payload["username"]})
+    access, access_ttl = utils.create_access_token({"id": str(payload["id"]), "username": payload["username"]})
 
     return schemas.TokenPair(
         access_token=access,
