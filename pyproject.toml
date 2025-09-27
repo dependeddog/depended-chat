@@ -15,6 +15,7 @@ dependencies = [
     "alembic",
     "aio-pika",
     "pyjwt",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [project.optional-dependencies]
