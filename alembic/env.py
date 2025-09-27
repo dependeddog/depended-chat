@@ -1,9 +1,18 @@
+import os
+import sys
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+sys.path.insert(0, BASE_DIR)
+
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 from src.config import settings
 from src.models import Base
+import src.auth.models  # noqa: F401  (RefreshToken и т.п.)
+import src.chat.models  # noqa: F401  (User, Message и т.п.)
 
 config = context.config
 fileConfig(config.config_file_name)

@@ -1,25 +1,80 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.chat.dependencies import get_db
-
-from . import schemas, service, utils
+from src.core.db.dependencies import get_db
+from src.users import schemas as users_schemas, service as users_service
+from . import exceptions, schemas, service, utils
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+refresh_bearer = HTTPBearer(auto_error=True)
 
-@router.post("/register", response_model=schemas.UserRead)
-async def register(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
-    existing = await service.get_user_by_username(db, user_in.username)
+
+@router.post("/register", response_model=users_schemas.UserRead)
+async def register(user_in: users_schemas.UserCreate, db: AsyncSession = Depends(get_db)):
+    """Регистрация нового пользователя."""
+    existing = await users_service.get_user_by_username(db, user_in.username)
     if existing:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    return await service.create_user(db, user_in)
+        raise exceptions.UsernameAlreadyRegistered()
+    return await users_service.create_user(db, user_in)
 
 
-@router.post("/login", response_model=schemas.Token)
-async def login(user_in: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
+@router.post("/login", response_model=schemas.TokenPair)
+async def login(user_in: users_schemas.UserLogin, request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    Логин: выдаём access и refresh, refresh сохраняем в БД.
+    """
     user = await service.authenticate_user(db, user_in.username, user_in.password)
-    if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    token = utils.create_access_token({"id": user.id, "username": user.username})
-    return schemas.Token(access_token=token)
+    access, access_ttl = utils.create_access_token({"id": user.id, "username": user.username})
+    refresh, _ = utils.create_refresh_token({"id": user.id, "username": user.username})
+
+    # Сохраняем refresh в БД с контекстом
+    ua = request.headers.get("user-agent")
+    ip = request.client.host if request.client else None
+    await service.persist_refresh(db, token=refresh, user_agent=ua, ip=ip)
+
+    return schemas.TokenPair(
+        access_token=access,
+        access_expires_in=access_ttl,
+        refresh_token=refresh,
+    )
+
+
+@router.post("/refresh", response_model=schemas.TokenPair)
+async def refresh_token(
+        _: Request,
+        creds: HTTPAuthorizationCredentials = Depends(refresh_bearer),
+        db: AsyncSession = Depends(get_db),
+):
+    """
+    Обновляем access по-валидному refresh + РОТИРУЕМ refresh.
+    Возвращаем НОВЫЙ refresh, чтобы клиент не потерял «нить».
+    """
+    payload = utils.decode_token(creds.credentials)
+    if payload.get("type") != "refresh":
+        raise exceptions.RefreshExpected()
+
+    await service.ensure_refresh_valid(db, creds.credentials)
+
+    # Ротация refresh -> получаем НОВЫЙ refresh и сохраняем его контекстом текущего запроса
+    new_refresh = await service.rotate_refresh(db, creds.credentials)
+
+    # Создаём новый access
+    access, access_ttl = utils.create_access_token({"id": payload["id"], "username": payload["username"]})
+
+    return schemas.TokenPair(
+        access_token=access,
+        access_expires_in=access_ttl,
+        refresh_token=new_refresh,
+    )
+
+
+@router.post("/logout", status_code=204)
+async def logout(creds: HTTPAuthorizationCredentials = Depends(refresh_bearer),
+                 db: AsyncSession = Depends(get_db), ):
+    """
+    Логаут: идемпотентный отзыв текущего refresh.
+    """
+    await service.revoke_refresh_by_raw(db, creds.credentials)
+    return Response(status_code=204)

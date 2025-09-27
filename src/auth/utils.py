@@ -1,5 +1,6 @@
 import hashlib
-from datetime import datetime, timedelta
+import time
+import uuid
 
 import jwt
 
@@ -14,8 +15,43 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return get_password_hash(plain_password) == hashed_password
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=30))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+def _base_claims(subject: str, ttl_seconds: int, *, token_type: str, extra: dict) -> dict:
+    now = int(time.time())
+    return {
+        "sub": subject,
+        "iat": now,
+        "nbf": now,
+        "exp": now + ttl_seconds,
+        "jti": str(uuid.uuid4()),
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+        "type": token_type,
+        **extra,
+    }
+
+
+def create_access_token(user: dict) -> tuple[str, int]:
+    """user = {'id': int, 'username': str}"""
+    ttl = settings.access_token_expire_minutes * 60
+    payload = _base_claims(str(user["id"]), ttl, token_type="access", extra=user)
+
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return token, ttl
+
+
+def create_refresh_token(user: dict) -> tuple[str, int]:
+    ttl = settings.refresh_token_expire_days * 24 * 60 * 60
+    payload = _base_claims(str(user["id"]), ttl, token_type="refresh", extra=user)
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return token, ttl
+
+
+def decode_token(token: str) -> dict:
+    return jwt.decode(
+        token,
+        settings.jwt_secret,
+        algorithms=[settings.jwt_algorithm],
+        audience=settings.jwt_audience,
+        issuer=settings.jwt_issuer,
+        options={"require": ["exp", "iat", "nbf", "aud", "iss", "jti", "type"]},
+    )

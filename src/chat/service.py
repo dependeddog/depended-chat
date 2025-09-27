@@ -3,8 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.broker.rabbitmq import broker
 
-from . import models, schemas
-from .constants import DEFAULT_LIMIT
+from . import models, schemas, constants
 
 
 async def create_message(db: AsyncSession, message_in: schemas.MessageCreate) -> models.Message:
@@ -16,7 +15,7 @@ async def create_message(db: AsyncSession, message_in: schemas.MessageCreate) ->
     return message
 
 
-async def list_messages(db: AsyncSession, limit: int = DEFAULT_LIMIT) -> list[models.Message]:
+async def list_messages(db: AsyncSession, limit: int = constants.DEFAULT_LIMIT) -> list[models.Message]:
     result = await db.execute(
         select(models.Message).order_by(models.Message.created_at).limit(limit)
     )
