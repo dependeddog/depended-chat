@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from enum import Enum
 import uuid
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -60,3 +60,11 @@ class Chat(Base):
     user1: Mapped["User"] = relationship(foreign_keys=[user1_id], back_populates="chats_as_user1")
     user2: Mapped["User"] = relationship(foreign_keys=[user2_id], back_populates="chats_as_user2")
     messages: Mapped[list["Message"]] = relationship(back_populates="chat", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        # чат уникален для пары участников (в любом порядке)
+        UniqueConstraint(
+            "user1_id", "user2_id",
+            name="uq_chats_user1_user2"
+        ),
+    )
