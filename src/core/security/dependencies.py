@@ -9,7 +9,7 @@ from src.core.security import exceptions as security_exceptions
 from src.users import models as users_models, service as users_service
 from . import exceptions
 
-bearer = HTTPBearer(auto_error=False)
+bearer = HTTPBearer(auto_error=True)
 
 
 def _decode_access(token: str) -> dict:
@@ -30,8 +30,8 @@ def _decode_access(token: str) -> dict:
 
 
 async def get_current_user(
+		creds: HTTPAuthorizationCredentials,
 		db: AsyncSession = Depends(db_dependencies.get_db),
-		creds: HTTPAuthorizationCredentials = Depends(bearer),
 ) -> users_models.User:
 	payload = _decode_access(creds.credentials)
 
