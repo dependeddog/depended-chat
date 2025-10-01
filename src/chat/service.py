@@ -1,9 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import select, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.broker.rabbitmq import broker
-
-from . import models, schemas, constants
+from . import constants, models, schemas
 
 
 async def create_message(db: AsyncSession, message_in: schemas.MessageCreate) -> models.Message:
@@ -20,3 +19,22 @@ async def list_messages(db: AsyncSession, limit: int = constants.DEFAULT_LIMIT) 
         select(models.Message).order_by(models.Message.created_at).limit(limit)
     )
     return result.scalars().all()
+
+
+async def create_chat(db: AsyncSession, chat_in: schemas.ChatCreate) -> models.Chat:
+    stmt = select(models.Chat).where(
+        or_(
+            and_(models.Chat.user1_id == chat_in.user1_id, models.Chat.user2_id == chat_in.user2_id),
+            and_(models.Chat.user1_id == chat_in.user2_id, models.Chat.user2_id == chat_in.user1_id),
+        )
+    )
+    res = await db.execute(stmt)
+    existing = res.scalar_one_or_none()
+    if existing:
+        return existing
+
+    chat = models.Chat(chat_in.model_dump())
+    db.add(chat)
+    await db.commit()
+    await db.refresh(chat)
+    return chat
