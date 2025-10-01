@@ -1,0 +1,51 @@
+### LOGIN
+
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "username": "fergsiot",
+  "password": "12345"
+}
+
+###
+
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "username": "honfi",
+  "password": "12345"
+}
+
+### REGISTRATION
+
+POST http://localhost:8000/auth/register
+Content-Type: application/json
+
+{
+  "username": "fergsiot",
+  "password": "12345"
+}
+
+###
+
+POST http://localhost:8000/auth/register
+Content-Type: application/json
+
+{
+  "username": "honfi",
+  "password": "12345"
+}
+
+### REFRESH TOKENS
+
+POST http://localhost:8000/auth/refresh
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNmJiNzRhOC1mY2QyLTQ3NTgtOTNjYS00ZDA1ZGYxOGE2OWIiLCJpYXQiOjE3NTg5ODM0MTgsIm5iZiI6MTc1ODk4MzQxOCwiZXhwIjoxNzYwMTkzMDE4LCJqdGkiOiI4MTEyYmM0Yi1kYjdlLTQwNjQtYjg4NS0zZWM1YzdjNjNlM2UiLCJpc3MiOiJkZXBlbmRlZC1jaGF0IiwiYXVkIjoiZGVwZW5kZWQtdXNlcnMiLCJ0eXBlIjoicmVmcmVzaCIsImlkIjoiMTZiYjc0YTgtZmNkMi00NzU4LTkzY2EtNGQwNWRmMThhNjliIiwidXNlcm5hbWUiOiJmZXJnc2lvdCJ9.PRwdAhX-zB2i1OU1VyHK7qnp7zvlZHC3F7cPKHNdcmM
+
+###
+
+POST http://localhost:8000/auth/refresh
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZGFhZWEyNS1iNTRjLTQ3Y2YtYTBjNC1hYzA2NjAxMGMzYjAiLCJpYXQiOjE3NTg5NTkzNjgsIm5iZiI6MTc1ODk1OTM2OCwiZXhwIjoxNzYwMTY4OTY4LCJqdGkiOiJhNTczYmE1NC04NDg2LTQwZTUtOTlkNS0yZGRhNzZmMzhhYzkiLCJpc3MiOiJkZXBlbmRlZC1jaGF0IiwiYXVkIjoiZGVwZW5kZWQtdXNlcnMiLCJ0eXBlIjoicmVmcmVzaCIsImlkIjoiNGRhYWVhMjUtYjU0Yy00N2NmLWEwYzQtYWMwNjYwMTBjM2IwIiwidXNlcm5hbWUiOiJob25maSJ9.w4eHivfGSBqFfZz91GfFCn3KWo3qcgZFe3UZwgQDtYA
+
+###
