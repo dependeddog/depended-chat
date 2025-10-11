@@ -1,5 +1,5 @@
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +30,7 @@ def _decode_access(token: str) -> dict:
 
 
 async def get_current_user(
-		creds: HTTPAuthorizationCredentials,
+		creds: HTTPAuthorizationCredentials = Security(bearer),
 		db: AsyncSession = Depends(db_dependencies.get_db),
 ) -> users_models.User:
 	payload = _decode_access(creds.credentials)
