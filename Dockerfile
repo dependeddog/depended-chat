@@ -6,7 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONPATH=/app \
-    # Порт вашего FastAPI-сервиса внутри контейнера
     APP_PORT=8000
 
 # По желанию можно добавить системные утилиты (например, для отладки сети):
