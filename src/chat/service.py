@@ -35,11 +35,9 @@ async def create_chat(db: AsyncSession, chat_in: schemas.ChatCreate) -> models.C
 	if existing:
 		return existing
 
-	data = chat_in.model_dump()
-
 	chat = models.Chat(
-		user1_id=data.sender_id,
-		user2_id=data.recipient_id,
+		user1_id=chat_in.sender_id,
+		user2_id=chat_in.recipient_id,
 	)
 	db.add(chat)
 	await db.commit()

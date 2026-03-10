@@ -34,7 +34,7 @@ async def persist_refresh(
         raise exceptions.NotRefreshToken()
 
     jti: str = payload["jti"]
-    user_id: UUID = payload["id"]
+    user_id = UUID(str(payload["id"]))
     exp_ts: int = payload["exp"]
 
     rt = models.RefreshToken(
@@ -69,7 +69,7 @@ async def ensure_refresh_valid(db: AsyncSession, token: str) -> None:
         raise exceptions.RefreshNotFound()
     if rt.revoked_at is not None:
         raise exceptions.RefreshRevoked()
-    if rt.expires_at <= security.now_utc():
+    if rt.expires_at.timestamp() <= security.now_utc().timestamp():
         raise exceptions.RefreshExpired()
     if rt.token_sha256 != security.sha256_hex(token):
         raise exceptions.RefreshMismatch()
@@ -93,7 +93,7 @@ async def rotate_refresh(db: AsyncSession, token: str) -> str:
     if rt is None:
         raise exceptions.RefreshNotFound()
 
-    if rt.revoked_at is not None or rt.expires_at <= security.now_utc():
+    if rt.revoked_at is not None or rt.expires_at.timestamp() <= security.now_utc().timestamp():
         raise exceptions.RefreshInactive()
 
     # Помечаем текущий refresh как использованный и отозванный
@@ -108,7 +108,7 @@ async def rotate_refresh(db: AsyncSession, token: str) -> str:
     new_payload = utils.decode_token(new_refresh)
     new_rt = models.RefreshToken(
         id=uuid4(),
-        user_id=new_payload["id"],
+        user_id=UUID(str(new_payload["id"])),
         jti=new_payload["jti"],
         token_sha256=security.sha256_hex(new_refresh),
         created_at=security.now_utc(),

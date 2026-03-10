@@ -1,11 +1,10 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from enum import Enum
 import uuid
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
 
 from src.models import Base
 
@@ -22,15 +21,15 @@ class MessageType(str, Enum):
 class Message(Base):
     __tablename__ = "messages"
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
-    chat_id: Mapped[UUID] = mapped_column(ForeignKey("chats.id"))
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    chat_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chats.id"))
     type: Mapped[MessageType] = mapped_column(SAEnum(MessageType), default=MessageType.TEXT)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     media_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
 
@@ -41,18 +40,18 @@ class Message(Base):
 class Chat(Base):
     __tablename__ = "chats"
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user1_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    user2_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user1_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user2_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
         nullable=False
     )
 
