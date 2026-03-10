@@ -1,48 +1,66 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class MessageType(str, Enum):
-	TEXT = "text"
-	IMAGE = "image"
-	CALL = "call"
+class ChatType(str, Enum):
+    DIRECT = "direct"
 
 
-class MessageCreate(BaseModel):
-	user_id: UUID
-	chat_id: UUID
-	type: MessageType = MessageType.TEXT
-	content: str | None = None
-	media_url: str | None = None
+class UserShort(BaseModel):
+    id: UUID
+    username: str
+
+
+class CreateDirectChatRequest(BaseModel):
+    user_id: UUID
+
+
+class MessageCreateRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
 
 
 class MessageRead(BaseModel):
-	id: UUID
-	user_id: UUID
-	type: MessageType
-	content: str | None = None
-	media_url: str | None = None
-	created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
 
-	class Config:
-		from_attributes = True
+    id: UUID
+    chat_id: UUID
+    sender_id: UUID
+    text: str
+    created_at: datetime
 
 
-class ChatCreate(BaseModel):
-	sender_id: Optional[UUID] = None
-	recipient_id: UUID
+class ChatListItem(BaseModel):
+    id: UUID
+    type: ChatType
+    companion: UserShort
+    last_message: MessageRead | None = None
+    unread_count: int
+    created_at: datetime
+    updated_at: datetime
 
 
-class ChatRead(BaseModel):
-	id: UUID
-	user1_id: UUID
-	user2_id: UUID
-	created_at: datetime
-	updated_at: datetime
+class DirectChatResponse(BaseModel):
+    chat_id: UUID
+    type: ChatType
+    companion: UserShort
 
-	class Config:
-		from_attributes = True
+
+class ChatDetailsResponse(BaseModel):
+    chat_id: UUID
+    type: ChatType
+    companion: UserShort
+    last_message: MessageRead | None = None
+    unread_count: int
+
+
+class ChatMessagesResponse(BaseModel):
+    items: list[MessageRead]
+    limit: int
+    offset: int
+
+
+class MarkReadResponse(BaseModel):
+    status: str = "ok"
