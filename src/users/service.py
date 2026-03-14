@@ -14,7 +14,7 @@ async def get_user_by_username(db: AsyncSession, username: str) -> Optional[mode
 
 
 async def get_user_by_id(db: AsyncSession, user_id: UUID) -> Optional[models.User]:
-	result = await db.execute(select(models.User).where(models.User.id == user_id))
+	result = await db.execute(select(models.User).where(models.User.id == UUID(str(user_id))))
 	return result.scalar_one_or_none()
 
 
