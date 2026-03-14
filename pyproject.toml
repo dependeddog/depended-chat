@@ -3,23 +3,27 @@ name = "depended-chat"
 version = "0.1.0"
 description = "Modern chat backend"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.12"
 authors = [{name = "Example", email = "example@example.com"}]
 
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "sqlalchemy[asyncio]",
-    "asyncpg",
-    "pydantic-settings",
-    "alembic",
-    "aio-pika",
-    "pyjwt",
-    "psycopg2-binary>=2.9.10",
+    "fastapi~=0.116.1",
+    "uvicorn[standard]~=0.35.0",
+    "sqlalchemy[asyncio]~=2.0.43",
+    "asyncpg~=0.30.0",
+    "pydantic-settings~=2.10.1",
+    "alembic~=1.16.4",
+    "aio-pika~=9.5.7",
+    "pyjwt~=2.12.1",
+    "psycopg2-binary~=2.9.10",
+    "pytest>=8.4.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
+    "pytest~=8.4.1",
+    "pytest-asyncio~=1.3.0",
+    "httpx~=0.28.1",
+    "aiosqlite~=0.22.1",
 ]
 
