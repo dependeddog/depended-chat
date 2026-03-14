@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from enum import Enum
+from typing import TYPE_CHECKING
 import uuid
 
 from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint, Uuid
@@ -12,14 +13,12 @@ if TYPE_CHECKING:
     from src.users.models import User
 
 
-class MessageType(str, Enum):
-    TEXT = "text"
-    IMAGE = "image"
-    CALL = "call"
+class ChatType(str, Enum):
+    DIRECT = "direct"
 
 
-class Message(Base):
-    __tablename__ = "messages"
+class Chat(Base):
+    __tablename__ = "chats"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
@@ -33,12 +32,18 @@ class Message(Base):
         nullable=False
     )
 
-    user: Mapped["User"] = relationship(back_populates="messages")
-    chat: Mapped["Chat"] = relationship(back_populates="messages")
+    participants: Mapped[list["ChatParticipant"]] = relationship(
+        back_populates="chat",
+        cascade="all, delete-orphan",
+    )
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="chat",
+        cascade="all, delete-orphan",
+    )
 
 
-class Chat(Base):
-    __tablename__ = "chats"
+class ChatParticipant(Base):
+    __tablename__ = "chat_participants"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     user1_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -48,22 +53,33 @@ class Chat(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    last_read_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False
     )
 
-    # связи
-    user1: Mapped["User"] = relationship(foreign_keys=[user1_id], back_populates="chats_as_user1")
-    user2: Mapped["User"] = relationship(foreign_keys=[user2_id], back_populates="chats_as_user2")
-    messages: Mapped[list["Message"]] = relationship(back_populates="chat", cascade="all, delete-orphan")
+    chat: Mapped["Chat"] = relationship(back_populates="participants")
+    user: Mapped["User"] = relationship(back_populates="chat_participants")
 
     __table_args__ = (
-        # чат уникален для пары участников (в любом порядке)
-        UniqueConstraint(
-            "user1_id", "user2_id",
-            name="uq_chats_user1_user2"
-        ),
+        UniqueConstraint("chat_id", "user_id", name="uq_chat_participants_chat_user"),
     )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chat_id: Mapped[UUID] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    sender_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    chat: Mapped["Chat"] = relationship(back_populates="messages")
+    sender: Mapped["User"] = relationship(back_populates="sent_messages")

@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select, or_, and_
+from fastapi import HTTPException, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.broker.rabbitmq import broker
+from src.users import models as users_models
 from . import constants, models, schemas
 
 
