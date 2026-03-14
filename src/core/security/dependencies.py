@@ -16,7 +16,7 @@ def _decode_access(token: str) -> dict:
 	try:
 		return jwt.decode(
 			token,
-			settings.jwt_secret,
+			settings.jwt_signing_key,
 			algorithms=[settings.jwt_algorithm],
 			audience=settings.jwt_audience,
 			issuer=settings.jwt_issuer,

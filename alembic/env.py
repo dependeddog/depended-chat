@@ -11,8 +11,9 @@ from alembic import context
 
 from src.config import settings
 from src.models import Base
-import src.auth.models  # noqa: F401  (RefreshToken и т.п.)
-import src.chat.models  # noqa: F401  (User, Message и т.п.)
+import src.auth.models  # noqa: F401
+import src.users.models  # noqa: F401
+import src.chat.models  # noqa: F401
 
 config = context.config
 fileConfig(config.config_file_name)
