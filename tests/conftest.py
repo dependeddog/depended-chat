@@ -120,7 +120,7 @@ async def create_chat(client: AsyncClient, create_user, auth_header):
         await create_user(owner)
         rec = await create_user(recipient)
         headers = await auth_header(owner)
-        response = await client.post("/chat/", json={"recipient_id": str(rec.id)}, headers=headers)
+        response = await client.post("/chats/direct", json={"user_id": str(rec.id)}, headers=headers)
         assert response.status_code == 200
         return response.json(), headers
 
