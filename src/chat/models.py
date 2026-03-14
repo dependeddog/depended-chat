@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 import uuid
 
-from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import DateTime, Enum as SAEnum, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models import Base
@@ -20,16 +20,19 @@ class ChatType(str, Enum):
 class Chat(Base):
     __tablename__ = "chats"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    chat_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chats.id"))
-    type: Mapped[MessageType] = mapped_column(SAEnum(MessageType), default=MessageType.TEXT)
-    content: Mapped[str | None] = mapped_column(Text, nullable=True)
-    media_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    type: Mapped[ChatType] = mapped_column(SAEnum(ChatType), default=ChatType.DIRECT, nullable=False)
+    direct_key: Mapped[str] = mapped_column(String(73), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     participants: Mapped[list["ChatParticipant"]] = relationship(
@@ -45,19 +48,18 @@ class Chat(Base):
 class ChatParticipant(Base):
     __tablename__ = "chat_participants"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user1_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    user2_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    chat_id: Mapped[UUID] = mapped_column(ForeignKey("chats.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
     last_read_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     chat: Mapped["Chat"] = relationship(back_populates="participants")

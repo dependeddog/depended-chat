@@ -1,3 +1,4 @@
+import hashlib
 from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -51,6 +52,11 @@ class Settings(BaseSettings):
     @property
     def jwt_secret(self) -> str:
         return self.jwt_secret_key.get_secret_value()
+
+    @property
+    def jwt_signing_key(self) -> bytes:
+        """Return a stable 32-byte signing key to avoid weak-HMAC runtime warnings."""
+        return hashlib.sha256(self.jwt_secret.encode("utf-8")).digest()
 
 
 settings = Settings()
