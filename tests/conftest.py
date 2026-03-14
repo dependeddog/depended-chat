@@ -50,16 +50,16 @@ async def client(db_session: AsyncSession):
 
     app.dependency_overrides[get_db] = override_get_db
 
-    from src.chat import service as chat_service
+    from src.broker.rabbitmq import broker
 
-    original_publish = chat_service.broker.publish
-    chat_service.broker.publish = fake_publish
+    original_publish = broker.publish
+    broker.publish = fake_publish
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as async_client:
         yield async_client
 
-    chat_service.broker.publish = original_publish
+    broker.publish = original_publish
     app.dependency_overrides.clear()
 
 
