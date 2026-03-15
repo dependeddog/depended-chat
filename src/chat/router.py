@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.db import dependencies as db_dependencies
 from src.core.security import dependencies as security_dependencies
 from src.users import models as users_models
-from . import constants, schemas, service
+from . import constants, schemas, service, ws_router
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -55,7 +55,9 @@ async def send_message(
     db: AsyncSession = Depends(db_dependencies.get_db),
     current_user: users_models.User = Depends(security_dependencies.get_current_user),
 ):
-    return await service.send_message(db, current_user.id, chat_id, payload)
+    message = await service.send_message(db, current_user.id, chat_id, payload)
+    await ws_router.broadcast_message_created(chat_id, message)
+    return message
 
 
 @router.post("/{chat_id}/read", response_model=schemas.MarkReadResponse)
@@ -64,4 +66,6 @@ async def mark_chat_as_read(
     db: AsyncSession = Depends(db_dependencies.get_db),
     current_user: users_models.User = Depends(security_dependencies.get_current_user),
 ):
-    return await service.mark_chat_as_read(db, current_user.id, chat_id)
+    response = await service.mark_chat_as_read(db, current_user.id, chat_id)
+    await ws_router.broadcast_chat_read(chat_id, current_user.id)
+    return response

@@ -27,6 +27,20 @@ async def _get_participant(
     return result.scalar_one_or_none()
 
 
+async def user_has_chat_access(db: AsyncSession, chat_id: UUID, user_id: UUID) -> bool:
+    chat = await db.get(models.Chat, chat_id)
+    if chat is None:
+        return False
+    participant = await _get_participant(db, chat_id, user_id)
+    return participant is not None
+
+
+async def get_chat_participant_ids(db: AsyncSession, chat_id: UUID) -> list[UUID]:
+    stmt = select(models.ChatParticipant.user_id).where(models.ChatParticipant.chat_id == chat_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def _get_companion(
     db: AsyncSession,
     chat_id: UUID,
@@ -71,6 +85,34 @@ async def _get_unread_count(
     )
     result = await db.execute(stmt)
     return int(result.scalar_one() or 0)
+
+
+async def get_chat_list_update_payload(
+    db: AsyncSession,
+    current_user_id: UUID,
+    chat_id: UUID,
+) -> schemas.ChatListItem:
+    participant = await _get_participant(db, chat_id, current_user_id)
+    if participant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+
+    chat = await db.get(models.Chat, chat_id)
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+
+    companion = await _get_companion(db, chat.id, current_user_id)
+    last_message = await _get_last_message(db, chat.id)
+    unread_count = await _get_unread_count(db, chat.id, current_user_id, participant)
+
+    return schemas.ChatListItem(
+        id=chat.id,
+        type=chat.type,
+        companion=schemas.UserShort(id=companion.id, username=companion.username),
+        last_message=schemas.MessageRead.model_validate(last_message) if last_message else None,
+        unread_count=unread_count,
+        created_at=chat.created_at,
+        updated_at=chat.updated_at,
+    )
 
 
 async def create_direct_chat(
