@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Body, Depends, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +8,7 @@ from . import exceptions, schemas, service, utils
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-refresh_bearer = HTTPBearer(auto_error=True)
+access_bearer = HTTPBearer(auto_error=True)
 
 
 @router.post("/register", response_model=users_schemas.UserRead)
@@ -44,21 +44,21 @@ async def login(user_in: users_schemas.UserLogin, request: Request, db: AsyncSes
 @router.post("/refresh", response_model=schemas.TokenPair)
 async def refresh_token(
         _: Request,
-        creds: HTTPAuthorizationCredentials = Depends(refresh_bearer),
+        refresh_token_param: str = Body(..., embed=True, min_length=1),
         db: AsyncSession = Depends(get_db),
 ):
     """
     Обновляем access по-валидному refresh + РОТИРУЕМ refresh.
     Возвращаем НОВЫЙ refresh, чтобы клиент не потерял «нить».
     """
-    payload = utils.decode_token(creds.credentials)
+    payload = utils.decode_token(refresh_token_param)
     if payload.get("type") != "refresh":
         raise exceptions.RefreshExpected()
 
-    await service.ensure_refresh_valid(db, creds.credentials)
+    await service.ensure_refresh_valid(db, refresh_token_param)
 
     # Ротация refresh -> получаем НОВЫЙ refresh и сохраняем его контекстом текущего запроса
-    new_refresh = await service.rotate_refresh(db, creds.credentials)
+    new_refresh = await service.rotate_refresh(db, refresh_token_param)
 
     # Создаём новый access
     access, access_ttl = utils.create_access_token({"id": str(payload["id"]), "username": payload["username"]})
@@ -71,8 +71,8 @@ async def refresh_token(
 
 
 @router.post("/logout", status_code=204)
-async def logout(creds: HTTPAuthorizationCredentials = Depends(refresh_bearer),
-                 db: AsyncSession = Depends(get_db), ):
+async def logout(creds: HTTPAuthorizationCredentials = Depends(access_bearer),
+				 db: AsyncSession = Depends(get_db), ):
     """
     Логаут: идемпотентный отзыв текущего refresh.
     """
