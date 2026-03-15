@@ -15,8 +15,7 @@ dependencies = [
     "alembic~=1.16.4",
     "aio-pika~=9.5.7",
     "pyjwt~=2.12.1",
-    "psycopg2-binary~=2.9.10",
-    "pytest>=8.4.2",
+    "psycopg2-binary~=2.9.10"
 ]
 
 [project.optional-dependencies]
