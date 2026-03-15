@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -91,7 +91,7 @@ async def create_direct_chat(
     chat = result.scalar_one_or_none()
 
     if chat is None:
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         chat = models.Chat(type=models.ChatType.DIRECT, direct_key=direct_key, created_at=now, updated_at=now)
         db.add(chat)
         await db.flush()
@@ -208,7 +208,7 @@ async def send_message(
     if not text:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message text cannot be empty")
 
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     message = models.Message(chat_id=chat_id, sender_id=current_user_id, text=text, created_at=now)
     db.add(message)
 
@@ -228,7 +228,7 @@ async def mark_chat_as_read(db: AsyncSession, current_user_id: UUID, chat_id: UU
     if participant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
 
-    participant.last_read_at = datetime.now(UTC)
+    participant.last_read_at = datetime.now(timezone.utc)
     await db.commit()
 
     return schemas.MarkReadResponse()
