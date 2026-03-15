@@ -6,6 +6,7 @@ import uuid
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import INET
 
 from src.models import Base
 
@@ -31,7 +32,7 @@ class RefreshToken(Base):
 
 	# Контекст
 	user_agent: Mapped[Optional[str]] = mapped_column(String)
-	ip: Mapped[Optional[str]] = mapped_column(String(45))
+	ip: Mapped[Optional[str]] = mapped_column(INET, nullable=True)
 
 	user = relationship("User")  # если у вас класс User уже объявлен
 	rotated_from = relationship("RefreshToken", remote_side=[id])

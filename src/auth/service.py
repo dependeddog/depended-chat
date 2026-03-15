@@ -15,7 +15,7 @@ async def authenticate_user(
     db: AsyncSession, username: str, password: str
 ) -> Optional[users_models.User]:
     user = await users_service.get_user_by_username(db, username)
-    if not user or not utils.verify_password(password, cast(str, user.password)):
+    if not user or not utils.verify_password(password, cast(str, cast(object, user.password))):
         raise exceptions.InvalidCredentials()
     return user
 
