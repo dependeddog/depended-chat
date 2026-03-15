@@ -67,10 +67,7 @@ async def test_refresh_success(client, create_user, login_user):
     await create_user("alice")
     login_data = await login_user("alice")
 
-    response = await client.post(
-        "/auth/refresh",
-        headers={"Authorization": f"Bearer {login_data['refresh_token']}"},
-    )
+    response = await client.post("/auth/refresh", json={"refresh_token_param": login_data["refresh_token"]})
 
     assert response.status_code == 200
     body = response.json()
@@ -84,10 +81,7 @@ async def test_refresh_with_access_token_rejected(client, create_user, login_use
     await create_user("alice")
     login_data = await login_user("alice")
 
-    response = await client.post(
-        "/auth/refresh",
-        headers={"Authorization": f"Bearer {login_data['access_token']}"},
-    )
+    response = await client.post("/auth/refresh", json={"refresh_token_param": login_data["access_token"]})
 
     assert response.status_code == 400
     assert response.json()["error"] == "refresh_expected"
@@ -97,7 +91,7 @@ async def test_refresh_with_access_token_rejected(client, create_user, login_use
 async def test_refresh_without_token(client):
     response = await client.post("/auth/refresh")
 
-    assert response.status_code in (401, 403)
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
