@@ -3,7 +3,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db.dependencies import get_db
-from src.users import schemas as users_schemas, service as users_service
+from src.core.security import dependencies as security_dependencies
+from src.users import models as users_models, schemas as users_schemas, service as users_service
 from . import exceptions, schemas, service, utils
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -78,3 +79,8 @@ async def logout(creds: HTTPAuthorizationCredentials = Depends(access_bearer),
     """
     await service.revoke_refresh_by_raw(db, creds.credentials)
     return Response(status_code=204)
+
+
+@router.get("/whoami", response_model=users_schemas.UserRead)
+async def whoami(current_user: users_models.User = Depends(security_dependencies.get_current_user)):
+    return current_user

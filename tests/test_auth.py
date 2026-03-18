@@ -112,3 +112,21 @@ async def test_logout_without_token(client):
     response = await client.post("/auth/logout")
 
     assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_whoami_success(client, create_user, auth_header):
+    user = await create_user("alice")
+    headers = await auth_header("alice")
+
+    response = await client.get("/auth/whoami", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"id": str(user.id), "username": "alice"}
+
+
+@pytest.mark.asyncio
+async def test_whoami_unauthorized(client):
+    response = await client.get("/auth/whoami")
+
+    assert response.status_code in (401, 403)

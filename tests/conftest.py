@@ -140,9 +140,9 @@ async def user_in_db(db_session: AsyncSession):
 async def create_chat(client: AsyncClient, create_user, auth_header):
     async def _create(owner: str, recipient: str):
         await create_user(owner)
-        rec = await create_user(recipient)
+        await create_user(recipient)
         headers = await auth_header(owner)
-        response = await client.post("/chats/direct", json={"user_id": str(rec.id)}, headers=headers)
+        response = await client.post("/chats/direct", json={"username": recipient}, headers=headers)
         assert response.status_code == 200
         return response.json(), headers
 
@@ -223,8 +223,8 @@ def ws_register_and_login(ws_client: TestClient):
 
 @pytest.fixture()
 def ws_create_direct_chat(ws_client: TestClient):
-    def _create(owner_headers: dict[str, str], recipient_id: UUID) -> str:
-        response = ws_client.post("/chats/direct", json={"user_id": str(recipient_id)}, headers=owner_headers)
+    def _create(owner_headers: dict[str, str], recipient_username: str) -> str:
+        response = ws_client.post("/chats/direct", json={"username": recipient_username}, headers=owner_headers)
         assert response.status_code == 200
         return response.json()["chat_id"]
 
@@ -245,7 +245,7 @@ def ws_two_users_chat(ws_register_and_login, ws_create_direct_chat):
     def _setup():
         alice = ws_register_and_login("alice")
         bob = ws_register_and_login("bob")
-        chat_id = ws_create_direct_chat(alice["headers"], bob["id"])
+        chat_id = ws_create_direct_chat(alice["headers"], bob["username"])
         return alice, bob, chat_id
 
     return _setup
