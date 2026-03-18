@@ -10,7 +10,7 @@ async def test_create_chat_success(client, create_user, auth_header, db_session)
     bob = await create_user("bob")
 
     headers = await auth_header("alice")
-    response = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    response = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
 
     assert response.status_code == 200
     body = response.json()
@@ -27,8 +27,8 @@ async def test_create_chat_duplicate_returns_existing(client, create_user, auth_
     bob = await create_user("bob")
     headers = await auth_header("alice")
 
-    first = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
-    second = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    first = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
+    second = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -42,7 +42,7 @@ async def test_create_chat_duplicate_returns_existing(client, create_user, auth_
 async def test_create_chat_without_auth(client, create_user):
     bob = await create_user("bob")
 
-    response = await client.post("/chats/direct", json={"user_id": str(bob.id)})
+    response = await client.post("/chats/direct", json={"username": bob.username})
 
     assert response.status_code in (401, 403)
 
@@ -56,8 +56,8 @@ async def test_get_chats_current_user_only(client, create_user, auth_header):
     alice_headers = await auth_header("alice")
     bob_headers = await auth_header("bob")
 
-    await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=alice_headers)
-    await client.post("/chats/direct", json={"user_id": str(carol.id)}, headers=bob_headers)
+    await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    await client.post("/chats/direct", json={"username": carol.username}, headers=bob_headers)
 
     response = await client.get("/chats", headers=alice_headers)
 
@@ -80,7 +80,7 @@ async def test_send_message_success(client, create_user, auth_header, db_session
     bob = await create_user("bob")
     headers = await auth_header("alice")
 
-    chat_response = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
     assert chat_response.status_code == 200
     chat_id = chat_response.json()["chat_id"]
 
@@ -105,7 +105,7 @@ async def test_send_message_invalid_payload(client, create_user, auth_header):
     bob = await create_user("bob")
     headers = await auth_header("alice")
 
-    chat_response = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
     chat_id = chat_response.json()["chat_id"]
 
     response = await client.post(f"/chats/{chat_id}/messages", json={"content": "hello"}, headers=headers)
@@ -119,7 +119,7 @@ async def test_send_message_without_auth(client, create_user, auth_header):
     bob = await create_user("bob")
 
     headers = await auth_header("alice")
-    chat_response = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
     chat_id = chat_response.json()["chat_id"]
 
     response = await client.post(f"/chats/{chat_id}/messages", json={"text": "hello"})
@@ -133,7 +133,7 @@ async def test_get_messages_with_limit(client, create_user, auth_header):
     bob = await create_user("bob")
     headers = await auth_header("alice")
 
-    chat_response = await client.post("/chats/direct", json={"user_id": str(bob.id)}, headers=headers)
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=headers)
     assert chat_response.status_code == 200
     chat_id = chat_response.json()["chat_id"]
 
@@ -150,6 +150,60 @@ async def test_get_messages_with_limit(client, create_user, auth_header):
     body = response.json()
     assert len(body["items"]) == 1
     assert body["limit"] == 1
+
+
+@pytest.mark.asyncio
+async def test_create_chat_with_self_forbidden(client, create_user, auth_header):
+    await create_user("alice")
+    headers = await auth_header("alice")
+
+    response = await client.post("/chats/direct", json={"username": "alice"}, headers=headers)
+
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_create_chat_with_unknown_username_returns_not_found(client, create_user, auth_header):
+    await create_user("alice")
+    headers = await auth_header("alice")
+
+    response = await client.post("/chats/direct", json={"username": "missing-user"}, headers=headers)
+
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_message_read_status_changes_after_companion_marks_as_read(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+    bob_headers = await auth_header("bob")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    assert chat_response.status_code == 200
+    chat_id = chat_response.json()["chat_id"]
+
+    send_response = await client.post(
+        f"/chats/{chat_id}/messages",
+        json={"text": "delivery status check"},
+        headers=alice_headers,
+    )
+    assert send_response.status_code == 200
+    sent_message = send_response.json()
+    assert sent_message["is_own"] is True
+    assert sent_message["read_by_companion"] is False
+
+    before_read = await client.get(f"/chats/{chat_id}/messages", headers=alice_headers)
+    assert before_read.status_code == 200
+    assert before_read.json()["items"][0]["read_by_companion"] is False
+
+    mark_response = await client.post(f"/chats/{chat_id}/read", headers=bob_headers)
+    assert mark_response.status_code == 200
+    assert mark_response.json()["read_up_to_message_id"] == sent_message["id"]
+
+    after_read = await client.get(f"/chats/{chat_id}/messages", headers=alice_headers)
+    assert after_read.status_code == 200
+    assert after_read.json()["items"][0]["read_by_companion"] is True
 
 
 @pytest.mark.asyncio

@@ -15,7 +15,7 @@ class UserShort(BaseModel):
 
 
 class CreateDirectChatRequest(BaseModel):
-    user_id: UUID
+    username: str = Field(min_length=1, max_length=255)
 
 
 class MessageCreateRequest(BaseModel):
@@ -30,6 +30,8 @@ class MessageRead(BaseModel):
     sender_id: UUID
     text: str
     created_at: datetime
+    is_own: bool
+    read_by_companion: bool
 
 
 class ChatListItem(BaseModel):
@@ -64,3 +66,4 @@ class ChatMessagesResponse(BaseModel):
 
 class MarkReadResponse(BaseModel):
     status: str = "ok"
+    read_up_to_message_id: UUID | None = None

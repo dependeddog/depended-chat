@@ -67,5 +67,5 @@ async def mark_chat_as_read(
     current_user: users_models.User = Depends(security_dependencies.get_current_user),
 ):
     response = await service.mark_chat_as_read(db, current_user.id, chat_id)
-    await ws_router.broadcast_chat_read(chat_id, current_user.id)
+    await ws_router.broadcast_chat_read(chat_id, current_user.id, response.read_up_to_message_id)
     return response

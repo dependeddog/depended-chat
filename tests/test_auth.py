@@ -67,10 +67,7 @@ async def test_refresh_success(client, create_user, login_user):
     await create_user("alice")
     login_data = await login_user("alice")
 
-    response = await client.post(
-        "/auth/refresh",
-        headers={"Authorization": f"Bearer {login_data['refresh_token']}"},
-    )
+    response = await client.post("/auth/refresh", json={"refresh_token_param": login_data["refresh_token"]})
 
     assert response.status_code == 200
     body = response.json()
@@ -84,10 +81,7 @@ async def test_refresh_with_access_token_rejected(client, create_user, login_use
     await create_user("alice")
     login_data = await login_user("alice")
 
-    response = await client.post(
-        "/auth/refresh",
-        headers={"Authorization": f"Bearer {login_data['access_token']}"},
-    )
+    response = await client.post("/auth/refresh", json={"refresh_token_param": login_data["access_token"]})
 
     assert response.status_code == 400
     assert response.json()["error"] == "refresh_expected"
@@ -97,7 +91,7 @@ async def test_refresh_with_access_token_rejected(client, create_user, login_use
 async def test_refresh_without_token(client):
     response = await client.post("/auth/refresh")
 
-    assert response.status_code in (401, 403)
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -116,5 +110,23 @@ async def test_logout_success(client, create_user, login_user):
 @pytest.mark.asyncio
 async def test_logout_without_token(client):
     response = await client.post("/auth/logout")
+
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_whoami_success(client, create_user, auth_header):
+    user = await create_user("alice")
+    headers = await auth_header("alice")
+
+    response = await client.get("/auth/whoami", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"id": str(user.id), "username": "alice"}
+
+
+@pytest.mark.asyncio
+async def test_whoami_unauthorized(client):
+    response = await client.get("/auth/whoami")
 
     assert response.status_code in (401, 403)
