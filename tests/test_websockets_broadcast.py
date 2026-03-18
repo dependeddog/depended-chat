@@ -60,6 +60,7 @@ def test_rest_mark_read_broadcasts_chat_read_and_chat_list_updated(ws_client, ws
         headers=alice["headers"],
     )
     assert msg_response.status_code == 200
+    message_id = msg_response.json()["id"]
 
     with ws_connect(f"/ws/chats/{chat_id}", bob["access_token"]) as bob_chat_ws, ws_connect(
         "/ws/events", bob["access_token"]
@@ -74,7 +75,7 @@ def test_rest_mark_read_broadcasts_chat_read_and_chat_list_updated(ws_client, ws
         assert chat_read_event["event"] == "chat.read"
         assert chat_read_event["data"]["chat_id"] == chat_id
         assert chat_read_event["data"]["user_id"] == str(bob["id"])
-        assert chat_read_event["data"]["read_up_to_message_id"] is None
+        assert chat_read_event["data"]["read_up_to_message_id"] == message_id
 
         chat_list_update = bob_events_ws.receive_json()
         assert chat_list_update["event"] == "chat.list.updated"

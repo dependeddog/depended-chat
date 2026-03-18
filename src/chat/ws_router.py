@@ -9,7 +9,7 @@ from src.auth import ws_auth
 from src.database import SessionLocal
 from . import service
 from .ws_manager import ws_manager
-from .ws_schemas import ChatReadData, ConnectionReadyData, TypingData, WebSocketEnvelope
+from .ws_schemas import ChatReadData, ConnectionReadyData, MessageCreatedData, TypingData, WebSocketEnvelope
 
 router = APIRouter(tags=["chat-websocket"])
 
@@ -101,9 +101,17 @@ async def websocket_chat_events(websocket: WebSocket, chat_id: UUID) -> None:
 
 
 async def broadcast_message_created(chat_id: UUID, message) -> None:
+    message_payload = MessageCreatedData(
+        id=message.id,
+        chat_id=message.chat_id,
+        sender_id=message.sender_id,
+        text=message.text,
+        created_at=message.created_at,
+    ).model_dump(mode="json")
+
     await ws_manager.broadcast_to_chat(
         chat_id,
-        _event_payload("message.created", message.model_dump(mode="json")),
+        _event_payload("message.created", message_payload),
     )
 
     async with SessionLocal() as db:
@@ -116,12 +124,16 @@ async def broadcast_message_created(chat_id: UUID, message) -> None:
             )
 
 
-async def broadcast_chat_read(chat_id: UUID, user_id: UUID) -> None:
+async def broadcast_chat_read(chat_id: UUID, user_id: UUID, read_up_to_message_id: UUID | None) -> None:
     await ws_manager.broadcast_to_chat(
         chat_id,
         _event_payload(
             "chat.read",
-            ChatReadData(chat_id=chat_id, user_id=user_id, read_up_to_message_id=None).model_dump(mode="json"),
+            ChatReadData(
+                chat_id=chat_id,
+                user_id=user_id,
+                read_up_to_message_id=read_up_to_message_id,
+            ).model_dump(mode="json"),
         ),
     )
 
