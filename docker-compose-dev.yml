@@ -6,15 +6,11 @@ services:
     environment:
       # URL БД для async SQLAlchemy/asyncpg
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/chat
-      # URL брокера сообщений
-      AMQP_URL: amqp://guest:guest@broker:5672/
       APP_MODULE: src.main:app
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
     depends_on:
       db:
-        condition: service_healthy
-      broker:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -39,21 +35,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
-    networks:
-      - appnet
-
-  broker:
-    image: rabbitmq:3.13-management
-    restart: unless-stopped
-    ports:
-      - "5672:5672"    # AMQP
-      - "15672:15672"  # Web UI (опционально)
-    healthcheck:
-      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q ping" ]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 10s
     networks:
       - appnet
 
