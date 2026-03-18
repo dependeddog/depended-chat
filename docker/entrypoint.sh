@@ -16,29 +16,29 @@ echo "APP_MODULE=${APP_MODULE}"
 
 # --------- ОЖИДАНИЕ ДОСТУПНОСТИ БД -------------------------------------------
 # Не тянем лишние пакеты — проверим сокет через встроенный python.
-python - <<'PY'
-import os, socket, sys
-from urllib.parse import urlparse
-
-url = os.environ['DATABASE_URL']
-# Поддержка URL вида postgresql+asyncpg://user:pass@host:port/db
-parsed = urlparse(url.replace('+asyncpg', ''))  # socket не понимает '+asyncpg'
-host = parsed.hostname or 'db'
-port = parsed.port or 5432
-
-for attempt in range(60):
-    try:
-        s = socket.create_connection((host, port), timeout=2)
-        s.close()
-        print(f"DB is reachable at {host}:{port}")
-        sys.exit(0)
-    except OSError:
-        print(f"Waiting for DB at {host}:{port} ... (attempt {attempt+1}/60)")
-    import time; time.sleep(2)
-
-print("ERROR: Database is not reachable, giving up.", file=sys.stderr)
-sys.exit(1)
-PY
+#python - <<'PY'
+#import os, socket, sys
+#from urllib.parse import urlparse
+#
+#url = os.environ['DATABASE_URL']
+## Поддержка URL вида postgresql+asyncpg://user:pass@host:port/db
+#parsed = urlparse(url.replace('+asyncpg', ''))  # socket не понимает '+asyncpg'
+#host = parsed.hostname or 'db'
+#port = parsed.port or 5432
+#
+#for attempt in range(60):
+#    try:
+#        s = socket.create_connection((host, port), timeout=2)
+#        s.close()
+#        print(f"DB is reachable at {host}:{port}")
+#        sys.exit(0)
+#    except OSError:
+#        print(f"Waiting for DB at {host}:{port} ... (attempt {attempt+1}/60)")
+#    import time; time.sleep(2)
+#
+#print("ERROR: Database is not reachable, giving up.", file=sys.stderr)
+#sys.exit(1)
+#PY
 
 # --------- МИГРАЦИИ -----------------------------------------------------------
 echo "Running Alembic migrations..."

@@ -4,8 +4,6 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      # URL БД для async SQLAlchemy/asyncpg
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/chat
       APP_MODULE: src.main:app
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
