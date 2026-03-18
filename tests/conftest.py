@@ -28,7 +28,6 @@ os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "7")
 os.environ.setdefault("JWT_ISSUER", "depended-chat-tests")
 os.environ.setdefault("JWT_AUDIENCE", "depended-chat-tests")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./.tmp-ignore.db")
-os.environ.setdefault("RABBITMQ_URL", "amqp://guest:guest@localhost/")
 
 from src.core.db.dependencies import get_db
 from src.main import app
@@ -57,20 +56,14 @@ async def client(db_session: AsyncSession):
     async def override_get_db():
         yield db_session
 
-    async def fake_publish(queue: str, message: str) -> None:
-        return None
-
     app.dependency_overrides[get_db] = override_get_db
 
     from src.auth import ws_auth
-    from src.broker.rabbitmq import broker
     from src.chat import ws_router
 
-    original_publish = broker.publish
     original_ws_auth_session_local = ws_auth.SessionLocal
     original_ws_router_session_local = ws_router.SessionLocal
 
-    broker.publish = fake_publish
     test_session_factory = async_sessionmaker(db_session.bind, expire_on_commit=False)
     ws_auth.SessionLocal = test_session_factory
     ws_router.SessionLocal = test_session_factory
@@ -79,7 +72,6 @@ async def client(db_session: AsyncSession):
     async with AsyncClient(transport=transport, base_url="http://test") as async_client:
         yield async_client
 
-    broker.publish = original_publish
     ws_auth.SessionLocal = original_ws_auth_session_local
     ws_router.SessionLocal = original_ws_router_session_local
     app.dependency_overrides.clear()
@@ -174,27 +166,20 @@ def ws_client(tmp_path: Path):
         async with session_factory() as session:
             yield session
 
-    async def fake_publish(queue: str, message: str) -> None:
-        return None
-
     app.dependency_overrides[get_db] = override_get_db
 
     from src.auth import ws_auth
-    from src.broker.rabbitmq import broker
     from src.chat import ws_router
 
-    original_publish = broker.publish
     original_ws_auth_session_local = ws_auth.SessionLocal
     original_ws_router_session_local = ws_router.SessionLocal
 
-    broker.publish = fake_publish
     ws_auth.SessionLocal = session_factory
     ws_router.SessionLocal = session_factory
 
     with TestClient(app) as client:
         yield client
 
-    broker.publish = original_publish
     ws_auth.SessionLocal = original_ws_auth_session_local
     ws_router.SessionLocal = original_ws_router_session_local
     app.dependency_overrides.clear()

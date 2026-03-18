@@ -44,11 +44,6 @@ class Settings(BaseSettings):
         description="DSN Postgres",
     )
 
-    rabbitmq_url: str = Field(
-        ...,
-        validation_alias="RABBITMQ_URL"
-    )
-
     @property
     def jwt_secret(self) -> str:
         return self.jwt_secret_key.get_secret_value()

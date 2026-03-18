@@ -7,7 +7,7 @@ A modern chat backend template built with **Python 3.12**, **FastAPI**, and **Po
 - FastAPI application with modular structure inspired by [`fastapi-best-practices`](https://github.com/zhanymkanov/fastapi-best-practices)
 - Asynchronous SQLAlchemy models with PostgreSQL 16+
 - Alembic migrations
-- RabbitMQ broker integration via `aio-pika`
+- In-process WebSocket connection manager for realtime updates
 - Ready for future extensions like media messages and calls
 
 ## Development
@@ -32,10 +32,10 @@ alembic upgrade head
 
 ## Docker
 
-Run the application, PostgreSQL database, RabbitMQ broker, and Nginx reverse proxy with Docker Compose:
+Run the application, PostgreSQL database, and Nginx reverse proxy with Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-The API will be available at [http://localhost](http://localhost) and the RabbitMQ management UI at [http://localhost:15672](http://localhost:15672).
+The API will be available at [http://localhost](http://localhost).

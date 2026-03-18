@@ -13,7 +13,6 @@ dependencies = [
     "asyncpg~=0.30.0",
     "pydantic-settings~=2.10.1",
     "alembic~=1.16.4",
-    "aio-pika~=9.5.7",
     "pyjwt~=2.12.1",
     "psycopg2-binary~=2.9.10"
 ]
@@ -25,4 +24,3 @@ dev = [
     "httpx~=0.28.1",
     "aiosqlite~=0.22.1",
 ]
-
