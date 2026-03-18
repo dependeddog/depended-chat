@@ -3,3 +3,6 @@ up:
 
 make-env:
 	@cp ./.env.example ./.env
+
+down:
+	@docker compose -f docker-compose-dev.yml down
