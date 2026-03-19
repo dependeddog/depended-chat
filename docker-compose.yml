@@ -7,6 +7,7 @@ services:
       APP_MODULE: src.main:app
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
+      UVICORN_WORKERS: "1"
     ports:
       - "8000:8000"
     networks:
