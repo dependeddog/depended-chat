@@ -61,6 +61,13 @@ async def _get_companion(
     return companion
 
 
+async def get_user_short_by_id(db: AsyncSession, user_id: UUID) -> users_models.User:
+    user = await db.get(users_models.User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+
 async def _get_last_message(db: AsyncSession, chat_id: UUID) -> models.Message | None:
     stmt = (
         select(models.Message)

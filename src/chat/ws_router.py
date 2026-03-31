@@ -6,7 +6,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from pydantic import ValidationError
 
 from src.auth import ws_auth
+from src.devices import service as devices_service
 from src.database import SessionLocal
+from src.notifications.firebase_service import FirebasePushPayload, firebase_push_service
 from . import service
 from .ws_manager import ws_manager
 from .ws_schemas import (
@@ -65,7 +67,7 @@ async def websocket_chat_events(websocket: WebSocket, chat_id: UUID) -> None:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await ws_manager.connect_chat(chat_id, websocket)
+    await ws_manager.connect_chat(chat_id, current_user.id, websocket)
     await websocket.send_json(
         _event_payload(
             "connection.ready",
@@ -125,7 +127,26 @@ async def broadcast_message_created(chat_id: UUID, message) -> None:
 
     async with SessionLocal() as db:
         participant_ids = await service.get_chat_participant_ids(db, chat_id)
+        sender = await service.get_user_short_by_id(db, message.sender_id)
         for participant_id in participant_ids:
+            if participant_id != message.sender_id:
+                is_in_chat = await ws_manager.is_user_active_in_chat(participant_id, chat_id)
+                if not is_in_chat:
+                    tokens = await devices_service.get_active_tokens(db, participant_id)
+                    if tokens:
+                        payload = FirebasePushPayload(
+                            title=sender.username,
+                            body=message.text.strip() if message.text.strip() else "Новое сообщение",
+                            data={
+                                "type": "new_message",
+                                "chat_id": str(message.chat_id),
+                                "message_id": str(message.id),
+                                "sender_id": str(message.sender_id),
+                            },
+                        )
+                        _, invalid_tokens = await firebase_push_service.send_to_tokens(tokens, payload)
+                        for invalid_token in invalid_tokens:
+                            await devices_service.invalidate_token(db, invalid_token, "invalid_firebase_token")
             update = await service.get_chat_list_update_payload(db, participant_id, chat_id)
             await ws_manager.send_to_user(
                 participant_id,
