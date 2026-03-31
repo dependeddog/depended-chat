@@ -27,6 +27,7 @@ async def login(user_in: users_schemas.UserLogin, request: Request, db: AsyncSes
     Логин: выдаём access и refresh, refresh сохраняем в БД.
     """
     user = await service.authenticate_user(db, user_in.username, user_in.password)
+    await users_service.update_last_seen(db, user, force=True)
     access, access_ttl = utils.create_access_token({"id": str(user.id), "username": user.username})
     refresh, _ = utils.create_refresh_token({"id": str(user.id), "username": user.username})
 
@@ -82,5 +83,9 @@ async def logout(creds: HTTPAuthorizationCredentials = Depends(access_bearer),
 
 
 @router.get("/whoami", response_model=users_schemas.UserRead)
-async def whoami(current_user: users_models.User = Depends(security_dependencies.get_current_user)):
+async def whoami(
+    current_user: users_models.User = Depends(security_dependencies.get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await users_service.update_last_seen(db, current_user)
     return current_user

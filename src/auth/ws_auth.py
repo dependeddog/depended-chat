@@ -39,6 +39,8 @@ async def get_current_user_ws(websocket: WebSocket) -> users_models.User:
 
     async with SessionLocal() as db:
         user = await users_service.get_user_by_id(db, user_id)
+        if user:
+            await users_service.update_last_seen(db, user)
 
     if not user:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
