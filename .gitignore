@@ -10,3 +10,4 @@ venv/
 *.sqlite3
 alembic/versions/*.pyc
 
+/google-services.json
