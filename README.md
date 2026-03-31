@@ -39,3 +39,6 @@ docker compose up --build
 ```
 
 The API will be available at [http://localhost](http://localhost).
+
+> ⚠️ Realtime delivery currently uses an **in-process** WebSocket connection manager.
+> Run the API with a single Uvicorn worker (`UVICORN_WORKERS=1`) unless you add a shared pub/sub broker.

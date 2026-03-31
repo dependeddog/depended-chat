@@ -14,6 +14,12 @@ set -euo pipefail
 echo "DATABASE_URL=${DATABASE_URL}"
 echo "APP_MODULE=${APP_MODULE}"
 
+if [ "${UVICORN_WORKERS}" != "1" ]; then
+  echo "WARNING: UVICORN_WORKERS=${UVICORN_WORKERS} is not supported with in-process WebSocket manager."
+  echo "WARNING: Forcing UVICORN_WORKERS=1 to keep realtime delivery working."
+  UVICORN_WORKERS=1
+fi
+
 # --------- ОЖИДАНИЕ ДОСТУПНОСТИ БД -------------------------------------------
 # Не тянем лишние пакеты — проверим сокет через встроенный python.
 #python - <<'PY'
