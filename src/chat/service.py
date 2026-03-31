@@ -64,7 +64,7 @@ async def _get_companion(
 async def _get_last_message(db: AsyncSession, chat_id: UUID) -> models.Message | None:
     stmt = (
         select(models.Message)
-        .where(models.Message.chat_id == chat_id)
+        .where(models.Message.chat_id == chat_id, models.Message.is_deleted.is_(False))
         .order_by(models.Message.created_at.desc())
         .limit(1)
     )
@@ -85,9 +85,35 @@ def _build_message_read(
         sender_id=message.sender_id,
         text=message.text,
         created_at=message.created_at,
+        is_edited=message.is_edited,
+        edited_at=message.edited_at,
         is_own=is_own,
         read_by_companion=read_by_companion,
     )
+
+
+async def _get_chat_and_participant(
+    db: AsyncSession,
+    chat_id: UUID,
+    current_user_id: UUID,
+) -> tuple[models.Chat, models.ChatParticipant]:
+    participant = await _get_participant(db, chat_id, current_user_id)
+    if participant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+
+    chat = await db.get(models.Chat, chat_id)
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    return chat, participant
+
+
+async def _get_message_in_chat(db: AsyncSession, chat_id: UUID, message_id: UUID) -> models.Message:
+    stmt = select(models.Message).where(models.Message.id == message_id, models.Message.chat_id == chat_id)
+    result = await db.execute(stmt)
+    message = result.scalar_one_or_none()
+    if message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+    return message
 
 
 async def _get_companion_last_read_at(db: AsyncSession, chat_id: UUID, current_user_id: UUID) -> datetime:
@@ -111,6 +137,7 @@ async def _get_unread_count(
     stmt = select(func.count(models.Message.id)).where(
         models.Message.chat_id == chat_id,
         models.Message.sender_id != current_user_id,
+        models.Message.is_deleted.is_(False),
         models.Message.created_at > participant.last_read_at,
     )
     result = await db.execute(stmt)
@@ -122,13 +149,7 @@ async def get_chat_list_update_payload(
     current_user_id: UUID,
     chat_id: UUID,
 ) -> schemas.ChatListItem:
-    participant = await _get_participant(db, chat_id, current_user_id)
-    if participant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-
-    chat = await db.get(models.Chat, chat_id)
-    if chat is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    chat, participant = await _get_chat_and_participant(db, chat_id, current_user_id)
 
     companion = await _get_companion(db, chat.id, current_user_id)
     last_message = await _get_last_message(db, chat.id)
@@ -220,13 +241,7 @@ async def list_chats(db: AsyncSession, current_user_id: UUID) -> list[schemas.Ch
 
 
 async def get_chat_details(db: AsyncSession, current_user_id: UUID, chat_id: UUID) -> schemas.ChatDetailsResponse:
-    participant = await _get_participant(db, chat_id, current_user_id)
-    if participant is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-
-    chat = await db.get(models.Chat, chat_id)
-    if chat is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+    chat, participant = await _get_chat_and_participant(db, chat_id, current_user_id)
 
     companion = await _get_companion(db, chat.id, current_user_id)
     last_message = await _get_last_message(db, chat.id)
@@ -258,7 +273,7 @@ async def get_chat_messages(
 
     stmt = (
         select(models.Message)
-        .where(models.Message.chat_id == chat_id)
+        .where(models.Message.chat_id == chat_id, models.Message.is_deleted.is_(False))
         .order_by(models.Message.created_at.asc())
         .limit(limit)
         .offset(offset)
@@ -302,6 +317,73 @@ async def send_message(
 
     companion_last_read_at = await _get_companion_last_read_at(db, chat_id, current_user_id)
     return _build_message_read(message, current_user_id, companion_last_read_at)
+
+
+async def update_message(
+    db: AsyncSession,
+    current_user_id: UUID,
+    chat_id: UUID,
+    message_id: UUID,
+    payload: schemas.MessageUpdateRequest,
+) -> schemas.MessageRead:
+    chat, _ = await _get_chat_and_participant(db, chat_id, current_user_id)
+    message = await _get_message_in_chat(db, chat_id, message_id)
+
+    if message.sender_id != current_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot edit others messages")
+    if message.is_deleted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message is deleted")
+
+    text = payload.text.strip()
+    if not text:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message text cannot be empty")
+
+    now = datetime.now(timezone.utc)
+    message.text = text
+    message.is_edited = True
+    message.edited_at = now
+    chat.updated_at = now
+
+    await db.commit()
+    await db.refresh(message)
+
+    companion_last_read_at = await _get_companion_last_read_at(db, chat_id, current_user_id)
+    return _build_message_read(message, current_user_id, companion_last_read_at)
+
+
+async def delete_message(
+    db: AsyncSession,
+    current_user_id: UUID,
+    chat_id: UUID,
+    message_id: UUID,
+) -> None:
+    chat, _ = await _get_chat_and_participant(db, chat_id, current_user_id)
+    message = await _get_message_in_chat(db, chat_id, message_id)
+
+    if message.sender_id != current_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot delete others messages")
+
+    if message.is_deleted:
+        return
+
+    now = datetime.now(timezone.utc)
+    message.is_deleted = True
+    message.deleted_at = now
+    chat.updated_at = now
+    await db.commit()
+
+
+async def delete_chat(db: AsyncSession, current_user_id: UUID, chat_id: UUID) -> list[UUID]:
+    _, _ = await _get_chat_and_participant(db, chat_id, current_user_id)
+    participant_ids = await get_chat_participant_ids(db, chat_id)
+
+    chat = await db.get(models.Chat, chat_id)
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
+
+    await db.delete(chat)
+    await db.commit()
+    return participant_ids
 
 
 async def mark_chat_as_read(db: AsyncSession, current_user_id: UUID, chat_id: UUID) -> schemas.MarkReadResponse:

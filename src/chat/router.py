@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.db import dependencies as db_dependencies
@@ -58,6 +59,42 @@ async def send_message(
     message = await service.send_message(db, current_user.id, chat_id, payload)
     await ws_router.broadcast_message_created(chat_id, message)
     return message
+
+
+@router.patch("/{chat_id}/messages/{message_id}", response_model=schemas.MessageRead)
+async def update_message(
+    chat_id: UUID,
+    message_id: UUID,
+    payload: schemas.MessageUpdateRequest,
+    db: AsyncSession = Depends(db_dependencies.get_db),
+    current_user: users_models.User = Depends(security_dependencies.get_current_user),
+):
+    message = await service.update_message(db, current_user.id, chat_id, message_id, payload)
+    await ws_router.broadcast_message_updated(chat_id, message)
+    return message
+
+
+@router.delete("/{chat_id}/messages/{message_id}", status_code=204)
+async def delete_message(
+    chat_id: UUID,
+    message_id: UUID,
+    db: AsyncSession = Depends(db_dependencies.get_db),
+    current_user: users_models.User = Depends(security_dependencies.get_current_user),
+):
+    await service.delete_message(db, current_user.id, chat_id, message_id)
+    await ws_router.broadcast_message_deleted(chat_id, message_id)
+    return Response(status_code=204)
+
+
+@router.delete("/{chat_id}", status_code=204)
+async def delete_chat(
+    chat_id: UUID,
+    db: AsyncSession = Depends(db_dependencies.get_db),
+    current_user: users_models.User = Depends(security_dependencies.get_current_user),
+):
+    participant_ids = await service.delete_chat(db, current_user.id, chat_id)
+    await ws_router.broadcast_chat_deleted(chat_id, participant_ids)
+    return Response(status_code=204)
 
 
 @router.post("/{chat_id}/read", response_model=schemas.MarkReadResponse)

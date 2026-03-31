@@ -212,3 +212,107 @@ async def test_health(client):
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_update_message_success(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    chat_id = chat_response.json()["chat_id"]
+    message_response = await client.post(f"/chats/{chat_id}/messages", json={"text": "before"}, headers=alice_headers)
+    message_id = message_response.json()["id"]
+
+    response = await client.patch(
+        f"/chats/{chat_id}/messages/{message_id}",
+        json={"text": "after"},
+        headers=alice_headers,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text"] == "after"
+    assert body["is_edited"] is True
+    assert body["edited_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_update_message_of_another_user_forbidden(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+    bob_headers = await auth_header("bob")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    chat_id = chat_response.json()["chat_id"]
+    message_response = await client.post(f"/chats/{chat_id}/messages", json={"text": "hello"}, headers=alice_headers)
+    message_id = message_response.json()["id"]
+
+    response = await client.patch(
+        f"/chats/{chat_id}/messages/{message_id}",
+        json={"text": "hack"},
+        headers=bob_headers,
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_message_success(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    chat_id = chat_response.json()["chat_id"]
+    message_response = await client.post(f"/chats/{chat_id}/messages", json={"text": "to delete"}, headers=alice_headers)
+    message_id = message_response.json()["id"]
+
+    response = await client.delete(f"/chats/{chat_id}/messages/{message_id}", headers=alice_headers)
+    assert response.status_code == 204
+
+    messages_response = await client.get(f"/chats/{chat_id}/messages", headers=alice_headers)
+    assert messages_response.status_code == 200
+    assert messages_response.json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_delete_message_of_another_user_forbidden(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+    bob_headers = await auth_header("bob")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    chat_id = chat_response.json()["chat_id"]
+    message_response = await client.post(f"/chats/{chat_id}/messages", json={"text": "hello"}, headers=alice_headers)
+    message_id = message_response.json()["id"]
+
+    response = await client.delete(f"/chats/{chat_id}/messages/{message_id}", headers=bob_headers)
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_chat_success(client, create_user, auth_header):
+    await create_user("alice")
+    bob = await create_user("bob")
+    alice_headers = await auth_header("alice")
+    bob_headers = await auth_header("bob")
+
+    chat_response = await client.post("/chats/direct", json={"username": bob.username}, headers=alice_headers)
+    chat_id = chat_response.json()["chat_id"]
+
+    response = await client.delete(f"/chats/{chat_id}", headers=alice_headers)
+    assert response.status_code == 204
+
+    alice_chats_response = await client.get("/chats", headers=alice_headers)
+    bob_chats_response = await client.get("/chats", headers=bob_headers)
+    assert alice_chats_response.status_code == 200
+    assert bob_chats_response.status_code == 200
+    assert alice_chats_response.json() == []
+    assert bob_chats_response.json() == []
+
+    details_response = await client.get(f"/chats/{chat_id}", headers=alice_headers)
+    assert details_response.status_code == 404

@@ -152,3 +152,79 @@ def test_disconnect_removes_connection_from_manager(ws_connect, ws_register_and_
         assert len(ws_manager._user_connections[user["id"]]) == 1
 
     assert user["id"] not in ws_manager._user_connections
+
+
+def test_rest_update_message_broadcasts_message_updated(ws_client, ws_connect, ws_two_users_chat):
+    alice, bob, chat_id = ws_two_users_chat()
+
+    create_message_response = ws_client.post(
+        f"/chats/{chat_id}/messages",
+        json={"text": "before edit"},
+        headers=alice["headers"],
+    )
+    assert create_message_response.status_code == 200
+    message_id = create_message_response.json()["id"]
+
+    with ws_connect(f"/ws/chats/{chat_id}", alice["access_token"]) as alice_chat_ws, ws_connect(
+        f"/ws/chats/{chat_id}", bob["access_token"]
+    ) as bob_chat_ws:
+        alice_chat_ws.receive_json()
+        bob_chat_ws.receive_json()
+
+        response = ws_client.patch(
+            f"/chats/{chat_id}/messages/{message_id}",
+            json={"text": "after edit"},
+            headers=alice["headers"],
+        )
+        assert response.status_code == 200
+
+        for payload in (alice_chat_ws.receive_json(), bob_chat_ws.receive_json()):
+            assert payload["event"] == "message.updated"
+            assert payload["data"]["chat_id"] == chat_id
+            assert payload["data"]["message"]["id"] == message_id
+            assert payload["data"]["message"]["text"] == "after edit"
+            assert payload["data"]["message"]["is_edited"] is True
+
+
+def test_rest_delete_message_broadcasts_message_deleted(ws_client, ws_connect, ws_two_users_chat):
+    alice, bob, chat_id = ws_two_users_chat()
+
+    create_message_response = ws_client.post(
+        f"/chats/{chat_id}/messages",
+        json={"text": "delete me"},
+        headers=alice["headers"],
+    )
+    assert create_message_response.status_code == 200
+    message_id = create_message_response.json()["id"]
+
+    with ws_connect(f"/ws/chats/{chat_id}", alice["access_token"]) as alice_chat_ws, ws_connect(
+        f"/ws/chats/{chat_id}", bob["access_token"]
+    ) as bob_chat_ws:
+        alice_chat_ws.receive_json()
+        bob_chat_ws.receive_json()
+
+        response = ws_client.delete(f"/chats/{chat_id}/messages/{message_id}", headers=alice["headers"])
+        assert response.status_code == 204
+
+        for payload in (alice_chat_ws.receive_json(), bob_chat_ws.receive_json()):
+            assert payload["event"] == "message.deleted"
+            assert payload["data"]["chat_id"] == chat_id
+            assert payload["data"]["message_id"] == message_id
+
+
+def test_rest_delete_chat_broadcasts_chat_deleted(ws_client, ws_connect, ws_two_users_chat):
+    alice, bob, chat_id = ws_two_users_chat()
+
+    with ws_connect(f"/ws/chats/{chat_id}", alice["access_token"]) as alice_chat_ws, ws_connect(
+        f"/ws/chats/{chat_id}", bob["access_token"]
+    ) as bob_chat_ws, ws_connect("/ws/events", bob["access_token"]) as bob_events_ws:
+        alice_chat_ws.receive_json()
+        bob_chat_ws.receive_json()
+        bob_events_ws.receive_json()
+
+        response = ws_client.delete(f"/chats/{chat_id}", headers=alice["headers"])
+        assert response.status_code == 204
+
+        for payload in (alice_chat_ws.receive_json(), bob_chat_ws.receive_json(), bob_events_ws.receive_json()):
+            assert payload["event"] == "chat.deleted"
+            assert payload["data"]["chat_id"] == chat_id

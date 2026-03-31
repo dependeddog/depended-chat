@@ -28,6 +28,20 @@ class MessageCreatedData(BaseModel):
     created_at: datetime
 
 
+class MessageUpdatedData(BaseModel):
+    chat_id: UUID
+    message: schemas.MessageRead
+
+
+class MessageDeletedData(BaseModel):
+    chat_id: UUID
+    message_id: UUID
+
+
+class ChatDeletedData(BaseModel):
+    chat_id: UUID
+
+
 class ChatReadData(BaseModel):
     chat_id: UUID
     user_id: UUID

@@ -9,7 +9,16 @@ from src.auth import ws_auth
 from src.database import SessionLocal
 from . import service
 from .ws_manager import ws_manager
-from .ws_schemas import ChatReadData, ConnectionReadyData, MessageCreatedData, TypingData, WebSocketEnvelope
+from .ws_schemas import (
+    ChatDeletedData,
+    ChatReadData,
+    ConnectionReadyData,
+    MessageCreatedData,
+    MessageDeletedData,
+    MessageUpdatedData,
+    TypingData,
+    WebSocketEnvelope,
+)
 
 router = APIRouter(tags=["chat-websocket"])
 
@@ -145,3 +154,43 @@ async def broadcast_chat_read(chat_id: UUID, user_id: UUID, read_up_to_message_i
                 participant_id,
                 _event_payload("chat.list.updated", update.model_dump(mode="json")),
             )
+
+
+async def broadcast_message_updated(chat_id: UUID, message) -> None:
+    payload = MessageUpdatedData(chat_id=chat_id, message=message).model_dump(mode="json")
+    await ws_manager.broadcast_to_chat(chat_id, _event_payload("message.updated", payload))
+
+    async with SessionLocal() as db:
+        participant_ids = await service.get_chat_participant_ids(db, chat_id)
+        for participant_id in participant_ids:
+            update = await service.get_chat_list_update_payload(db, participant_id, chat_id)
+            await ws_manager.send_to_user(
+                participant_id,
+                _event_payload("chat.list.updated", update.model_dump(mode="json")),
+            )
+
+
+async def broadcast_message_deleted(chat_id: UUID, message_id: UUID) -> None:
+    await ws_manager.broadcast_to_chat(
+        chat_id,
+        _event_payload(
+            "message.deleted",
+            MessageDeletedData(chat_id=chat_id, message_id=message_id).model_dump(mode="json"),
+        ),
+    )
+
+    async with SessionLocal() as db:
+        participant_ids = await service.get_chat_participant_ids(db, chat_id)
+        for participant_id in participant_ids:
+            update = await service.get_chat_list_update_payload(db, participant_id, chat_id)
+            await ws_manager.send_to_user(
+                participant_id,
+                _event_payload("chat.list.updated", update.model_dump(mode="json")),
+            )
+
+
+async def broadcast_chat_deleted(chat_id: UUID, participant_ids: list[UUID]) -> None:
+    payload = _event_payload("chat.deleted", ChatDeletedData(chat_id=chat_id).model_dump(mode="json"))
+    await ws_manager.broadcast_to_chat(chat_id, payload)
+    for participant_id in participant_ids:
+        await ws_manager.send_to_user(participant_id, payload)
