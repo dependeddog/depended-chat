@@ -45,6 +45,9 @@ The API will be available at [http://localhost](http://localhost).
 
 ## Firebase
 Requires firebase project.
+
 Requiers credential file, you can get it in Google Cloud admin panel (https://console.cloud.google.com/iam-admin/serviceaccounts/details/)
-Route: Service Accounts -> <select your project> -> select or create service account with role "Firebase Cloud Messaging API Admin" -> Key -> Add key -> Create new key -> json, 
+
+Route: Service Accounts -> \<select your project\> -> select or create service account with role "Firebase Cloud Messaging API Admin" -> Key -> Add key -> Create new key -> json, 
+
 then put .json file to the project root and fill .env parametrs.
