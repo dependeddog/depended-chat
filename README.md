@@ -42,6 +42,9 @@ The API will be available at [http://localhost](http://localhost).
 
 > ⚠️ Realtime delivery currently uses an **in-process** WebSocket connection manager.
 > Run the API with a single Uvicorn worker (`UVICORN_WORKERS=1`) unless you add a shared pub/sub broker.
->
-> ## Firebase
-> Requiers credential file? you can get it in Google Cloud admin panel (https://console.cloud.google.com/iam-admin/serviceaccounts/details/) -> Service Accounts -> <select your project> -> select or create service account with role "Firebase Cloud Messaging API Admin" -> Key -> Add key -> Create new key -> json, then put .json file to the project root
+
+## Firebase
+Requires firebase project.
+Requiers credential file, you can get it in Google Cloud admin panel (https://console.cloud.google.com/iam-admin/serviceaccounts/details/) 
+Route: Service Accounts -> <select your project> -> select or create service account with role "Firebase Cloud Messaging API Admin" -> Key -> Add key -> Create new key -> json, 
+then put .json file to the project root and fill .env parametrs.
