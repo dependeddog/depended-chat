@@ -1,0 +1,33 @@
+### CREATE DIRECT CHAT
+POST http://localhost:8000/chats/direct
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "user_id": "00000000-0000-0000-0000-000000000002"
+}
+
+### LIST CHATS
+GET http://localhost:8000/chats
+Authorization: Bearer {{access_token}}
+
+### GET CHAT DETAILS
+GET http://localhost:8000/chats/{{chat_id}}
+Authorization: Bearer {{access_token}}
+
+### SEND MESSAGE
+POST http://localhost:8000/chats/{{chat_id}}/messages
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+  "text": "Привет!"
+}
+
+### GET CHAT MESSAGES
+GET http://localhost:8000/chats/{{chat_id}}/messages?limit=20&offset=0
+Authorization: Bearer {{access_token}}
+
+### MARK CHAT AS READ
+POST http://localhost:8000/chats/{{chat_id}}/read
+Authorization: Bearer {{access_token}}

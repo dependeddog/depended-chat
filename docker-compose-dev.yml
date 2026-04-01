@@ -1,0 +1,58 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # URL БД для async SQLAlchemy/asyncpg
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/chat
+      APP_MODULE: src.main:app
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      UVICORN_WORKERS: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - appnet
+
+  db:
+    image: postgres:16-alpine
+    command: ["postgres", "-c", "listen_addresses=*", "-c", "password_encryption=scram-sha-256"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: chat
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d chat" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    networks:
+      - appnet
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
+
+volumes:
+  postgres_data:

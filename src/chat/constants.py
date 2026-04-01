@@ -1,0 +1,2 @@
+DEFAULT_LIMIT: int = 20
+MAX_LIMIT: int = 100
