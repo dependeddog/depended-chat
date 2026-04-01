@@ -44,6 +44,10 @@ class Settings(BaseSettings):
         description="DSN Postgres",
     )
 
+    firebase_enabled: bool = Field(default=False, validation_alias="FIREBASE_ENABLED")
+    firebase_project_id: str | None = Field(default=None, validation_alias="FIREBASE_PROJECT_ID")
+    firebase_credentials_path: str | None = Field(default=None, validation_alias="FIREBASE_CREDENTIALS_PATH")
+
     @property
     def jwt_secret(self) -> str:
         return self.jwt_secret_key.get_secret_value()

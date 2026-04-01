@@ -22,6 +22,10 @@ class MessageCreateRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
+class MessageUpdateRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class MessageRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,6 +34,8 @@ class MessageRead(BaseModel):
     sender_id: UUID
     text: str
     created_at: datetime
+    is_edited: bool
+    edited_at: datetime | None = None
     is_own: bool
     read_by_companion: bool
 

@@ -145,9 +145,13 @@ async def create_chat(client: AsyncClient, create_user, auth_header):
 def reset_ws_manager_state():
     ws_manager._user_connections.clear()
     ws_manager._chat_connections.clear()
+    ws_manager._connection_users.clear()
+    ws_manager._connection_chats.clear()
     yield
     ws_manager._user_connections.clear()
     ws_manager._chat_connections.clear()
+    ws_manager._connection_users.clear()
+    ws_manager._connection_chats.clear()
 
 
 @pytest.fixture()
