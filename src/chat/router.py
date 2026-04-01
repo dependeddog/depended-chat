@@ -1,4 +1,4 @@
-import logging
+from logging import Logger
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.db import dependencies as db_dependencies
 from src.core.security import dependencies as security_dependencies
 from src.users import models as users_models
+from src.logger import configure_logs
 from . import constants, schemas, service, ws_router
 
 router = APIRouter(prefix="/chats", tags=["chats"])
-logger = logging.getLogger(__name__)
+logger: Logger = configure_logs(__name__)
 
 
 @router.post("/direct", response_model=schemas.DirectChatResponse)
@@ -59,7 +60,7 @@ async def send_message(
 	current_user: users_models.User = Depends(security_dependencies.get_current_user),
 ):
 	message = await service.send_message(db, current_user.id, chat_id, payload)
-	logger.info(message)
+	logger.info("router %s", message)
 	await ws_router.broadcast_message_created(chat_id, message)
 	return message
 

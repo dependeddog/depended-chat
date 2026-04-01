@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import logging
+from logging import Logger
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
@@ -10,6 +10,7 @@ from src.auth import ws_auth
 from src.devices import service as devices_service
 from src.database import SessionLocal
 from src.notifications.firebase_service import FirebasePushPayload, firebase_push_service
+from src.logger import configure_logs
 from . import service
 from .ws_manager import ws_manager
 from .ws_schemas import (
@@ -24,7 +25,7 @@ from .ws_schemas import (
 )
 
 router = APIRouter(tags=["chat-websocket"])
-logger = logging.getLogger(__name__)
+logger: Logger = configure_logs(__name__)
 
 
 def _event_payload(event: str, data: dict) -> dict:
@@ -136,7 +137,7 @@ async def broadcast_message_created(chat_id: UUID, message) -> None:
 				if not is_in_chat:
 					tokens = await devices_service.get_active_tokens(db, participant_id)
 					if tokens:
-						logger.info(message)
+						logger.info("service %s", message)
 						payload = FirebasePushPayload(
 							title=sender.username,
 							body=message.text.strip() if message.text.strip() else "Новое сообщение",
